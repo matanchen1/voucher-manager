@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: coupon-db
+    environment:
+      POSTGRES_DB: coupon_manager
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - coupon-network
+
+  # Backend API
+  backend:
+    build: ./backend
+    container_name: coupon-backend
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://admin:password123@postgres:5432/coupon_manager
+      - JWT_SECRET=your-super-secret-jwt-key-change-this
+      - TELEGRAM_BOT_TOKEN=your-telegram-bot-token
+    ports:
+      - "3001:3001"
+    depends_on:
+      - postgres
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    networks:
+      - coupon-network
+
+  # Frontend React App
+  frontend:
+    build: ./frontend
+    container_name: coupon-frontend
+    environment:
+      - REACT_APP_API_URL=http://localhost:3001
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    networks:
+      - coupon-network
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: coupon-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - coupon-network
+
+volumes:
+  postgres_data:
+
+networks:
+  coupon-network:
+    driver: bridge
