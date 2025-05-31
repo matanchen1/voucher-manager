@@ -103,6 +103,12 @@ export const couponApi = {
     return response.data;
   },
 
+  // Get recent coupons
+  getRecentCoupons: async (): Promise<Coupon[]> => {
+    const response = await api.get<Coupon[]>('/coupons/recent');
+    return response.data;
+  },
+
   // Health check
   healthCheck: async (): Promise<{ status: string; timestamp: string; uptime: number }> => {
     const response = await api.get('/health');

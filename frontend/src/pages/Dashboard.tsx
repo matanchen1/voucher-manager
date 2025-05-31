@@ -1,33 +1,51 @@
 import React, { useState, useEffect } from 'react';
-import { Ticket, DollarSign, AlertTriangle, Building2 } from 'lucide-react';
-import { couponApi, formatCurrency } from '../services/api';
-import { CouponStats } from '../types';
+import { Ticket, DollarSign, AlertTriangle, Building2, Clock } from 'lucide-react';
+import { couponApi, formatCurrency, formatDate } from '../services/api';
+import { CouponStats, Coupon } from '../types';
 import StatsCard from '../components/StatsCard';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 const Dashboard: React.FC = () => {
   const [stats, setStats] = useState<CouponStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [loadingStats, setLoadingStats] = useState(true);
+  const [errorStats, setErrorStats] = useState<string | null>(null);
+
+  const [recentCoupons, setRecentCoupons] = useState<Coupon[] | null>(null);
+  const [loadingRecent, setLoadingRecent] = useState(true);
+  const [errorRecent, setErrorRecent] = useState<string | null>(null);
 
   useEffect(() => {
     fetchStats();
+    fetchRecentActivity();
   }, []);
 
   const fetchStats = async () => {
     try {
-      setLoading(true);
-      setError(null);
+      setLoadingStats(true);
+      setErrorStats(null);
       const data = await couponApi.getStats();
       setStats(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch statistics');
+      setErrorStats(err instanceof Error ? err.message : 'Failed to fetch statistics');
     } finally {
-      setLoading(false);
+      setLoadingStats(false);
     }
   };
 
-  if (loading) {
+  const fetchRecentActivity = async () => {
+    try {
+      setLoadingRecent(true);
+      setErrorRecent(null);
+      const data = await couponApi.getRecentCoupons();
+      setRecentCoupons(data);
+    } catch (err) {
+      setErrorRecent(err instanceof Error ? err.message : 'Failed to fetch recent activity');
+    } finally {
+      setLoadingRecent(false);
+    }
+  };
+
+  if (loadingStats) { // Keep initial full page load for stats
     return (
       <div className="flex items-center justify-center h-64">
         <LoadingSpinner size="lg" />
@@ -35,10 +53,11 @@ const Dashboard: React.FC = () => {
     );
   }
 
-  if (error) {
+  // Error for stats will still be full page
+  if (errorStats) {
     return (
       <div className="text-center py-12">
-        <div className="text-red-600 mb-4">{error}</div>
+        <div className="text-red-600 mb-4">{errorStats}</div>
         <button
           onClick={fetchStats}
           className="btn-primary"
@@ -147,11 +166,46 @@ const Dashboard: React.FC = () => {
           <h2 className="text-lg font-semibold text-gray-900">Recent Activity</h2>
         </div>
         <div className="card-body">
-          <div className="text-center py-8 text-gray-500">
-            <Ticket className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>Recent activity will appear here</p>
-            <p className="text-sm">Add some vouchers to get started!</p>
-          </div>
+          {loadingRecent && (
+            <div className="flex items-center justify-center py-8">
+              <LoadingSpinner size="md" />
+            </div>
+          )}
+          {errorRecent && (
+            <div className="text-center py-8">
+              <div className="text-red-600 mb-2">{errorRecent}</div>
+              <button onClick={fetchRecentActivity} className="btn-secondary">
+                Try Again
+              </button>
+            </div>
+          )}
+          {!loadingRecent && !errorRecent && (
+            <>
+              {recentCoupons && recentCoupons.length > 0 ? (
+                <ul className="divide-y divide-gray-200">
+                  {recentCoupons.map((coupon) => (
+                    <li key={coupon.id} className="py-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium text-gray-800">{coupon.code}</p>
+                          <p className="text-sm text-gray-600">{coupon.company}</p>
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {formatDate(coupon.date_added)}
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <Clock className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                  <p>No recent activity yet.</p>
+                  <p className="text-sm">New coupons will appear here.</p>
+                </div>
+              )}
+            </>
+          )}
         </div>
       </div>
     </div>

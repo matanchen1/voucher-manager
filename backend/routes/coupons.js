@@ -105,6 +105,33 @@ router.get('/', [
     }
 });
 
+// GET /api/coupons/recent - Get 5 most recently added coupons
+router.get('/recent', async (req, res) => {
+    try {
+        const dataQuery = `
+            SELECT
+                c.*,
+                CASE
+                    WHEN c.expiration_date IS NOT NULL AND c.expiration_date <= CURRENT_DATE THEN 'expired'
+                    WHEN c.expiration_date IS NOT NULL AND c.expiration_date BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '7 days' THEN 'expiring'
+                    WHEN c.type = 'product' AND c.is_used = true THEN 'used'
+                    WHEN c.type = 'money' AND c.remaining_amount <= 0 THEN 'used'
+                    ELSE 'active'
+                END as status
+            FROM coupons c
+            ORDER BY c.date_added DESC
+            LIMIT 5
+        `;
+
+        const result = await dbQuery(dataQuery);
+        res.json(result.rows);
+
+    } catch (error) {
+        console.error('Error fetching recent coupons:', error);
+        res.status(500).json({ error: 'Failed to fetch recent coupons' });
+    }
+});
+
 // GET /api/coupons/:id - Get single coupon
 router.get('/:id', async (req, res) => {
     try {
@@ -285,7 +312,10 @@ router.delete('/:id', async (req, res) => {
 });
 
 // GET /api/coupons/stats - Get statistics
-router.get('/stats/summary', async (req, res) => {
+// IMPORTANT: This was /stats/summary, but it conflicts with /:id.
+// Changed to /summary/stats to avoid conflict for now.
+// TODO: Re-evaluate routing strategy for /stats and /recent if more specific routes are added.
+router.get('/summary/stats', async (req, res) => {
     try {
         const stats = await dbQuery(`
             SELECT 
