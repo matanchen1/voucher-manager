@@ -387,6 +387,23 @@ app.get('/api/coupons/stats/summary', (req, res) => {
     }
 });
 
+// Get recent coupons
+app.get('/api/coupons/recent', (req, res) => {
+    try {
+        const couponsWithStatus = mockCoupons.map(updateCouponStatus);
+        
+        // Sort by date_added (most recent first) and take the first 5
+        const recentCoupons = couponsWithStatus
+            .sort((a, b) => new Date(b.date_added).getTime() - new Date(a.date_added).getTime())
+            .slice(0, 5);
+        
+        res.json(recentCoupons);
+    } catch (error) {
+        console.error('Error fetching recent coupons:', error);
+        res.status(500).json({ error: 'Failed to fetch recent activity' });
+    }
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
     console.error('Error:', err.stack);
