@@ -1,0 +1,9 @@
+{
+  "name": "coupon-manager-api",
+  "version": "1.0.0",
+  "description": "Serverless API for Coupon Manager",
+  "main": "coupons.js",
+  "dependencies": {
+    "uuid": "^9.0.0"
+  }
+} 
